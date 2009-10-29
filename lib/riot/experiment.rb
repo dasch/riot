@@ -144,7 +144,7 @@ module RiotExperiment
     
     def self.setup(&definition)
       define_method(:initialize) do
-        super
+        super()
         @topic = instance_eval(&definition)
       end
     end

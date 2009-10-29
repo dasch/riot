@@ -1,17 +1,15 @@
 require 'teststrap'
 
 context "matching assertion:" do
-  setup { Riot::Situation.new }
-
   asserts "result matches expression" do
-    Riot::Assertion.new("foo", topic) { "a" }.matches(%r[.])
-  end.equals(0)
+    Riot::Assertion.new("foo") { "a" }.matches(%r[.]).run(nil)
+  end.equals([:pass])
 
-  should "raise a Failure if result does not match" do
-    Riot::Assertion.new("foo", topic) { "" }.matches(%r[.])
-  end.kind_of(Riot::Failure)
+  should "fail if results do not match" do
+    Riot::Assertion.new("foo") { "" }.matches(%r[.]).run(nil)
+  end.equals([:fail, "expected #{%r[.].inspect} to match #{"".inspect}"])
 
-  should "return the result of a matching operation" do
-    Riot::Assertion.new("foo", topic) { "a" }.matches("a")
-  end.equals(0)
+  should "match even if expected is a string" do
+    Riot::Assertion.new("foo") { "a" }.matches("a").run(nil)
+  end.equals([:pass])
 end # maching assertion

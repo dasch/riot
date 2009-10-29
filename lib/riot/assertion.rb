@@ -1,37 +1,43 @@
 module Riot
   class Assertion
-    attr_reader :raised, :to_s, :description, :situation
-    def initialize(description, situation, &assertion_block)
-      @description = @to_s = description
-      @situation = situation
-      run(situation, &assertion_block)
+    attr_reader :description, :topic
+    def initialize(description, &definition)
+      @description = description
+      @definition = definition
+      self.default(nil)
     end
+    
+    alias_method :to_s, :description
 
-    def actual
-      unfail_if_default_failure_recorded
-      @actual
+    class << self
+      # This is how we define a new macro ...
+      def assertion_macro(name, assert_exception=false, &assertion_block)
+        define_method(name) do |*expectings|
+          (class << self; self; end).send(:define_method, :run) do |given_topic|
+            @topic = given_topic
+            evaluate(assert_exception, *expectings, &assertion_block)
+          end # define_method for :run
+          self
+        end # define_method for asserter
+      end
+    end # self
+
+    assertion_macro(:default) do |actual, expected|
+      actual ? pass : fail("Expected a non-false value but got #{actual.inspect} instead")
     end
-
-    def fail(message)
-      @failure = Failure.new("#{description}: #{message}") unless errored?
-    end
-
-    def passed?; !(failed? || errored?); end
-    def failed?; !@failure.nil?; end
-    def errored?; !@raised.nil?; end
-    def result; @failure || @raised; end
   private
-    def run(situation, &assertion_block)
-      @actual = situation.instance_eval(&assertion_block)
-      @default_failure = fail("expected true, not #{@actual.inspect}") unless @actual == true
-    rescue Failure => e
-      @failure = e
-    rescue Exception => e
-      @raised = Error.new("#{description}: errored with #{e}", e)
-    end
+    def self.pass; [:pass]; end
+    def self.fail(msg) [:fail, msg]; end
+    def self.error(msg) [:error, msg]; end
 
-    def unfail_if_default_failure_recorded
-      @default_failure = @failure = nil if @default_failure
+    def evaluate(assert_exception, *expectings, &assertion_block)
+      begin
+        actual = instance_eval(&@definition)
+        actual = nil if assert_exception
+        assertion_block.call(actual, *expectings)
+      rescue Exception => e
+        assert_exception ? assertion_block.call(e, *expectings) : self.class.error(e)
+      end
     end
   end # Assertion
 end # Riot

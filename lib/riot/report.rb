@@ -26,16 +26,30 @@ module Riot
       end
     end
 
-    def passed; @passes += 1; end
+    def passed(description); @passes += 1; end
     
-    def failed(failure)
+    def failed(description, failure)
       @failures += 1
       @bad_results << failure
     end
 
-    def errored(error)
+    def errored(description, error)
       @errors += 1
       @bad_results << error
+    end
+
+    def report_on_context(name); end
+
+    def report(description, result)
+      code, msg = result
+      case code
+      when :pass
+        passed(description)
+      when :fail
+        failed(description, msg)
+      when :error
+        errored(description, msg)
+      end
     end
   end # Report
 
@@ -44,27 +58,61 @@ module Riot
     def time(&block); yield; end
   end # NilReport
 
-  class TextReport < Report
+  class StoryReport < Report
     def initialize(writer=nil)
       super()
       @writer ||= STDOUT
     end
 
-    def passed
+    def report_on_context(name)
+      @writer.puts(name)
+    end
+
+    def passed(description)
+      super
+      @writer.puts("  PASS: #{description}")
+    end
+
+    def failed(description, failure)
+      super
+      @writer.puts("  FAIL: #{description}: #{failure}")
+    end
+
+    def errored(description, error)
+      super
+      @writer.puts("  ERROR: #{description}: #{error}")
+    end
+
+    def results
+      @writer.puts "\n\n"
+      format = "%d assertions, %d failures, %d errors in %s seconds"
+      @writer.puts format % [assertions, failures, errors, ("%0.6f" % time_taken)]
+    end
+  end
+
+  class DotMatrixReport < Report
+    def initialize(writer=nil)
+      super()
+      @writer ||= STDOUT
+    end
+
+    def passed(description)
       super && @writer.print('.')
     end
 
-    def failed(failure)
+    def failed(description, failure)
+      STDOUT.puts(failure.inspect)
       super && @writer.print('F')
     end
 
-    def errored(error)
+    def errored(description, error)
+      STDOUT.puts(error.inspect)
       super && @writer.print('E')
     end
 
     def results
       @writer.puts "\n\n"
-      print_bad_results
+      # print_bad_results
       format = "%d assertions, %d failures, %d errors in %s seconds"
       @writer.puts format % [assertions, failures, errors, ("%0.6f" % time_taken)]
     end

@@ -1,31 +1,34 @@
 require 'teststrap'
 
 context "basic assertion" do
-  setup { Riot::Situation.new }
-
   should "have a description" do
-    Riot::Assertion.new("i will pass", topic).to_s
+    Riot::Assertion.new("i will pass").to_s
   end.equals("i will pass")
 
-  asserts "pass? is true when assertion passed" do
-    Riot::Assertion.new("i will pass", topic) { true }.passed?
-  end
+  asserts ":pass is returned from run when assertion passed" do
+    Riot::Assertion.new("i will pass") { true }.run(nil)
+  end.equals([:pass])
 
-  asserts "failure? is true when assertion does not pass" do
-    Riot::Assertion.new("i will pass", topic) { false }.failed?
-  end
+  asserts ":fail with message is returned from run when assertion does not pass" do
+    Riot::Assertion.new("i will pass") { false }.run(nil)
+  end.equals([:fail, "Expected a non-false value but got false instead"])
 
-  asserts "error? is true when an unexpected Exception is raised" do
-    Riot::Assertion.new("error", topic) { raise Exception, "blah" }.errored?
-  end
+  asserts ":error is returned from run when an unexpected Exception is raised" do
+    Riot::Assertion.new("error") { raise Exception, "blah" }.run(nil).first
+  end.equals(:error)
 
-  context "that fails while executing a test" do
-    setup do
-      fake_situation = Riot::Situation.new
-      Riot::Assertion.new("error", fake_situation) { fail("I'm a bum") }
-    end
+  asserts "the exception is returned from run when an unexpected Exception is raised" do
+    Riot::Assertion.new("error") { raise Exception, "blah" }.run(nil).last
+  end.kind_of(Exception)
 
-    should("be considered a failing assertion") { topic.failed? }
-    should("use failed message in description") { topic.result.message }.matches(/I'm a bum/)
-  end # that fails while executing test
+  # DO WE STILL NEED THIS?
+  # context "that fails while executing a test" do
+  #   setup do
+  #     fake_situation = Riot::Situation.new
+  #     Riot::Assertion.new("error") { fail("I'm a bum") }.run(nil)
+  #   end
+  # 
+  #   should("be considered a failing assertion") { topic.failed? }
+  #   should("use failed message in description") { topic.result.message }.matches(/I'm a bum/)
+  # end # that fails while executing test
 end # basic assertion

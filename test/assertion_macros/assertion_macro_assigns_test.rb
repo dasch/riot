@@ -2,39 +2,26 @@ require 'teststrap'
 
 context "assigns assertion" do
   setup do
-    @fake_situation = Riot::Situation.new
-    object_with_instance_variables = Riot::Situation.new
-    object_with_instance_variables.instance_eval { @foo = "bar"; @bar = nil}
-    object_with_instance_variables
+    Class.new { def initialize; @foo, @bar = "bar", nil; end }.new
   end
 
   asserts("an instance variable was assigned") do
-    test_object = topic
-    Riot::Assertion.new("duh", @fake_situation) { test_object }.assigns(:foo)
-  end
+    Riot::Assertion.new("duh") { topic }.assigns(:foo).run(topic)
+  end.equals([:pass])
 
   asserts("an instance variable was never assigned") do
-    test_object = topic
-    Riot::Assertion.new("foo", @fake_situation) { test_object }.assigns(:baz)
-  end.kind_of(Riot::Failure)
+    Riot::Assertion.new("foo") { topic }.assigns(:baz).run(topic)
+  end.equals([:fail, "expected @baz to be assigned a value"])
   
-  asserts "an instance variable was defined with nil value" do
-    test_object = topic
-    Riot::Assertion.new("foo", @fake_situation) { test_object }.assigns(:bar).message
-  end.matches(/expected @bar to be assigned a value/)
-
   asserts("an instance variable was assigned a specific value") do
-    test_object = topic
-    Riot::Assertion.new("duh", @fake_situation) { test_object }.assigns(:foo, "bar")
-  end
+    Riot::Assertion.new("duh") { topic }.assigns(:foo, "bar").run(topic)
+  end.equals([:pass])
 
   asserts("failure when instance never assigned even when a value is expected") do
-    test_object = topic
-    Riot::Assertion.new("duh", @fake_situation) { test_object }.assigns(:bar, "bar").message
-  end.matches(/expected @bar to be assigned a value/)
+    Riot::Assertion.new("duh") { topic }.assigns(:bar, "bar").run(topic)
+  end.equals([:fail, "expected @bar to be assigned a value"])
 
   asserts("failure when expected value is not assigned to variable with a value") do
-    test_object = topic
-    Riot::Assertion.new("duh", @fake_situation) { test_object }.assigns(:foo, "baz").message
-  end.matches(/expected @foo to be equal to 'baz', not 'bar'/)
+    Riot::Assertion.new("duh") { topic }.assigns(:foo, "baz").run(topic)
+  end.equals([:fail, "expected @foo to be equal to 'baz', not 'bar'"])
 end # assigns assertion

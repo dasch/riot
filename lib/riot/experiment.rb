@@ -210,12 +210,12 @@ if $PROGRAM_NAME == __FILE__
     
     context("bar") do
       setup do
-        "bar"
+        topic + "bar"
       end
     
-      assert("is a bar") do
+      assert("is a qhatbar") do
         topic
-      end.equals("bar")
+      end.equals("qhatbar")
       
       assert("lies") do
         false

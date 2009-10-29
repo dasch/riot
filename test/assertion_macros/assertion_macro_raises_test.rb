@@ -3,41 +3,33 @@ require 'teststrap'
 class MyException < Exception; end
 
 context "raises assertion:" do
-  setup { Riot::Situation.new }
 
-  should("raise an Exception") { raise Exception }.raises(Exception)
+  should "raise an Exception" do
+    Riot::Assertion.new("foo") { raise Exception }.raises(Exception).run(nil)
+  end.equals([:pass])
 
   should "fail if nothing was raised" do
-    assertion = Riot::Assertion.new("foo", topic) { "barf" }
-    assertion.raises(Exception)
-    assertion.result.message
-  end.matches(/should have raised Exception, but raised nothing/)
+    Riot::Assertion.new("foo") { "barf" }.raises(Exception).run(nil)
+  end.equals([:fail, "should have raised Exception, but raised nothing"])
 
   should "fail if Exception classes do not match" do
-    Riot::Assertion.new("foo", topic) { raise MyException }.raises(Exception)
-  end.kind_of(Riot::Failure)
+    Riot::Assertion.new("foo") { raise MyException }.raises(Exception).run(nil)
+  end.equals([:fail, "should have raised Exception, not MyException"])
 
   should "pass if provided message equals expectation" do
-    Riot::Assertion.new("foo", topic) { raise Exception, "I'm a nerd" }.raises(Exception, "I'm a nerd")
-  end
+    Riot::Assertion.new("foo") { raise Exception, "I'm a nerd" }.raises(Exception, "I'm a nerd").run(nil)
+  end.equals([:pass])
 
   should "fail if provided message does not equal expectation" do
-    Riot::Assertion.new("foo", topic) { raise(Exception, "I'm a nerd") }.raises(Exception, "But I'm not")
-  end.kind_of(Riot::Failure)
+    Riot::Assertion.new("foo") { raise(Exception, "I'm a nerd") }.raises(Exception, "But I'm not").run(nil)
+  end.equals([:fail, "expected But I'm not for message, not I'm a nerd"])
 
   should "pass if provided message matches expectation" do
-    Riot::Assertion.new("foo", topic) { raise(Exception, "I'm a nerd") }.raises(Exception, /nerd/)
-  end
-
+    Riot::Assertion.new("foo") { raise(Exception, "I'm a nerd") }.raises(Exception, /nerd/).run(nil)
+  end.equals([:pass])
+  
   should "fail if provided message does not match expectation" do
-    Riot::Assertion.new("foo", topic) { raise(Exception, "I'm a nerd") }.raises(Exception, /foo/)
-  end.kind_of(Riot::Failure)
-
-  should "pass if provided message as array equals expectation" do
-    Riot::Assertion.new("foo", topic) { raise(Exception, ["foo", "bar"]) }.raises(Exception, "foobar")
-  end
-
-  should "pass if provided message as array matches expectation" do
-    Riot::Assertion.new("foo", topic) { raise(Exception, ["foo", "bar"]) }.raises(Exception, /oba/)
-  end
+    Riot::Assertion.new("foo") { raise(Exception, "I'm a nerd") }.raises(Exception, /foo/).run(nil)
+  end.equals([:fail, "expected #{/foo/} for message, not I'm a nerd"])
+  
 end # raises assertion

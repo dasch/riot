@@ -2,104 +2,56 @@ require 'teststrap'
 
 context "any context" do
   setup do
-    @reporter = Riot::NilReport.new
-    @context = Riot::Context.new("a", @reporter)
+    Class.new(Riot::Context)
   end
 
-  context "that doesn't have passing tests" do
+  context "with a passing, failing, and erroring test" do
     setup do
-      @context.should("a") { true }
-      @context.should("b") { false }
-      @context.should("c") { raise Exception, "blah" }
-      @context.report
+      topic.should("a") { true }
+      topic.should("b") { false }
+      topic.should("c") { raise Exception, "blah" }
+      topic.new.run(reporter = Riot::NilReport.new)
+      reporter
     end
 
-    asserts("passed test count") { @reporter.passes }.equals(1)
-    asserts("failure count") { @reporter.failures }.equals(1)
-    asserts("unexpected errors count") { @reporter.errors }.equals(1)
-  end # that doesn't have passing tests
+    asserts("passed test count") { topic.passes }.equals(1)
+    asserts("failure count") { topic.failures }.equals(1)
+    asserts("unexpected errors count") { topic.errors }.equals(1)
+  end # with a passing, failing, and erroring test
 
-  context "when running setup:" do
-    setup { @context.setup { "foo" } }
-
-    asserts "topic becomes available to test as result of setup" do
-      @context.should("bar") { topic }.actual
-    end.equals("foo")
-
-    asserts "calling topic in context will return assertion that returns topic as the actual" do
-      @context.topic.actual
-    end.equals("foo")
+  context "when running setup" do
+    setup do
+      topic.setup { "foo" }
+      topic.new
+    end
+  
+    asserts("topic is assigned to test as result of setup") { topic }.assigns(:topic, "foo")
+    asserts("topic is and accessible method during test") { topic }.respond_to(:topic)
+    asserts("calling topic in assertion returns the result from setup") { topic.topic }.equals("foo")
   end # when running setup
+
+  asserts "will return assertion that returns topic as the actual" do
+    topic.topic # :)
+  end.kind_of(Riot::Assertion)
 end # any context
 
 # 
 # Basic Context
 
-context "basic context" do
+context "a basic context" do
   setup do
-    test_context = Riot::Context.new("foo", Riot::NilReport.new)
-    test_context.setup { @test_counter = 0 }
-    test_context.asserts("truthiness") { @test_counter += 1; true }
-    test_context.asserts("more truthiness") { @test_counter += 1; true }
-    test_context
+    ctx = Class.new(Riot::Context)
+    ctx.description = "foo"
+    ctx.setup { @pass_me_around = {:counter => 0} }
+    ctx.asserts("truthiness") { topic[:counter] += 1; true }
+    ctx.asserts("more truthiness") { topic[:counter] += 1; true }
+    ctx.new.run(Riot::NilReport.new)
   end
 
-  asserts("context description") { topic.to_s }.equals("foo")
-  asserts("assertion count") { topic.assertions.length }.equals(2)
-  should("call setup once per context") { topic.situation }.assigns(:test_counter, 2)
-end # basic context
+  # asserts("description is the same as to_s") { topic.class.to_s }.equals("foo")
+  asserts("full description is the same as description with one context") do
+    topic.class.full_description
+  end.equals("foo")
 
-# 
-# Nested Context
-
-context "nested context" do
-  setup do
-    test_context = Riot::Context.new("foo", Riot::NilReport.new)
-    test_context.setup { @test_counter = 0; @foo = "bar" }
-    test_context.asserts("truthiness") { @test_counter += 1; true }
-    test_context
-  end
-  
-  context "inner context with own setup" do
-    setup do
-      test_context = topic.context("baz")
-      test_context.setup { @test_counter += 10 }
-      test_context
-    end
-  
-    should("inherit parent context") { topic.situation }.assigns(:test_counter, 10)
-    should("chain context names") { topic.to_s }.equals("foo baz")
-  end
-
-  context "inner context without its own setup" do
-    setup { topic.context("bum") }
-    asserts("parent setup is called") { topic.situation }.assigns(:foo, "bar")
-  end
-end
-
-# 
-# Multiple setups in a context
-
-context "multiple setups" do
-  setup do
-    test_context = Riot::Context.new("foo", Riot::NilReport.new)
-    test_context.setup { @foo = "bar" }
-    test_context.setup { @baz = "boo" }
-    test_context
-  end
-
-  asserts("foo") { topic.situation }.assigns(:foo, "bar")
-  asserts("bar") { topic.situation }.assigns(:baz, "boo")
-
-  context "in the parent of a nested context" do
-    setup do
-      test_context = topic.context("goo")
-      test_context.setup { @goo = "car" }
-      test_context
-    end
-
-    asserts("foo") { topic.situation }.assigns(:foo, "bar")
-    asserts("bar") { topic.situation }.assigns(:baz, "boo")
-    asserts("goo") { topic.situation }.assigns(:goo, "car")
-  end # in the parent of a nested context
-end # multiple setups
+  should("call setup once per context") { topic }.assigns(:pass_me_around, {:counter => 2})
+end # a basic context

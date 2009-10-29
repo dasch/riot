@@ -1,4 +1,6 @@
 #!/usr/bin/env ruby
+require 'rubygems'
+require 'colored'
 
 module RiotExperiment
   class << self
@@ -6,62 +8,103 @@ module RiotExperiment
   end
 
   class SilentReporter
-    def report_error(exception)
-    end
-    def report_pass
-    end
-    def report_fail
+    def report(*args)
     end
   end
   
   class Reporter
     
-    def report_error(exception)
-      puts "Error: #{exception.inspect}"
+    def report(context_description, assertion_description, assertion_results)
+      print "#{context_description} - #{assertion_description}: "
+      case assertion_results[0]
+      when :pass
+        report_pass
+      when :fail
+        report_fail(assertion_results[1])
+      when :error
+        report_error(assertion_results[1])
+      end
     end
     
     def report_pass
-      puts "Pass"
+      puts "Pass".green
     end
     
-    def report_fail
-      puts "Fail"
+    def report_fail(msg)
+      puts "Fail: #{msg}".yellow
     end
+    
+    def report_error(msg)
+      puts "Error: #{msg}".red
+    end
+    
   end
   
   self.reporter = Reporter.new
   
   class Assertion
-    attr_reader :topic
+    attr_reader :topic, :description
+    
     def initialize(description, &definition)
       @description = description
       @definition = definition
+      self.default(nil)
     end
     
-    def equals(expected)
-      (class << self; self; end).send(:define_method, :run) do |given_topic|
-        @topic = given_topic
-        begin
-          if instance_eval(&@definition) === expected
-            RiotExperiment.reporter.report_pass
-          else
-            RiotExperiment.reporter.report_fail
-          end          
-        rescue => e
-          RiotExperiment.reporter.report_error(e)
-        end
-      end
+    def self.add_asserter(name, return_exceptions = false, &block)
+      define_method(name) do |expected|
+        (class << self; self; end).send(:define_method, :run) do |given_topic|
+          @topic = given_topic
+          begin
+            assertion_return = instance_eval(&@definition)
+            block.call(expected, assertion_return)
+          rescue => e
+            if return_exceptions
+              block.call(expected, e)
+            else
+              self.class.error "Exception: #{e.inspect}"
+            end
+          end # exception handling
+        end # define_method for :run
+      end # define_method for asserter
     end
-    
-    def run(given_topic)
-      @topic = given_topic
-      if instance_eval(&@definition)
-        RiotExperiment.reporter.report_pass
+      
+    add_asserter :equals do |expected, assertion_val|
+      if expected === assertion_val
+        pass
       else
-        RiotExperiment.reporter.report_fail
+        fail "Expected '#{expected.inspect}' but got '#{assertion_val.inspect}'"
       end
-    rescue => e
-      RiotExperiment.reporter.report_error(e)
+    end
+    
+    add_asserter :raises, true do |expected, assertion_val|
+      if assertion_val.kind_of?(expected)
+        pass
+      else
+        fail "Expected '#{expected.inspect}' but got '#{assertion_val.inspect}'"
+      end        
+    end
+    
+    add_asserter :default do |expected, assertion_val|
+      if assertion_val
+        pass
+      else
+        fail "Expected a non-false value but got: '#{val.inspect}'"
+      end
+    end
+
+  private
+    
+    def self.pass
+      return [:pass]
+    end
+    
+    def self.fail(msg)
+      return [:fail, msg]
+    end
+    
+    def self.error(msg)
+      return [:error, msg]
     end
     
   end
@@ -84,6 +127,14 @@ module RiotExperiment
     def initialize
     end
     
+    def self.full_description
+      if superclass.respond_to?(:full_description)
+        "#{superclass.full_description} #{description}".strip
+      else
+        description
+      end
+    end
+    
     def self.context(description, &definition)
       ctx = Class.new(self, &definition)
       ctx.description = description
@@ -100,7 +151,9 @@ module RiotExperiment
     
     def self.assert(description, &definition)
       assertion = RiotExperiment::Assertion.new(description, &definition)
-      define_method("assertion: #{description}") { assertion.run(topic) }
+      define_method("assertion: #{description}") do 
+        RiotExperiment.reporter.report(self.class.full_description, assertion.description, assertion.run(topic))
+      end
       assertion
     end
     
@@ -123,31 +176,52 @@ module RiotExperiment
   end
 end
 
-# 
-# class Object
-#   def context(description, &definition)
-#     RiotExperiment::Context.context(description, &definition)
-#   end
-# end
-# 
-# context("foo") do
-#   setup do
-#     puts "hi mom"
-#   end
-#   
-#   assert("truth") do
-#     true
-#   end.equals(true)
-#   
-#   context("bar") do
-#     setup do
-#       puts "hi dad"
-#     end
-#     
-#     assert("lies") do
-#       false
-#     end.equals(false)
-#   end
-# end
-# 
-# RiotExperiment.run
+if $PROGRAM_NAME == __FILE__
+  class Object
+    def context(description, &definition)
+      RiotExperiment::Context.context(description, &definition)
+    end
+  end
+
+  context("foo") do
+    setup do
+      "qhat"
+    end
+  
+    assert("truth") do
+      true
+    end.equals(true)
+    
+    assert("this fails") do
+      true
+    end.equals(false)
+    
+    assert("wuh-oh") do
+      raise
+    end
+    
+    assert("dangnabbit") do
+      raise
+    end.raises(RuntimeError)
+    
+    assert("dangnabbit this fails") do
+      raise
+    end.raises(ArgumentError)
+    
+    context("bar") do
+      setup do
+        "bar"
+      end
+    
+      assert("is a bar") do
+        topic
+      end.equals("bar")
+      
+      assert("lies") do
+        false
+      end.equals(false)
+    end
+  end
+
+  RiotExperiment.run
+end

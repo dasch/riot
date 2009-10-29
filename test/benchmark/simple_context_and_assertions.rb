@@ -1,6 +1,6 @@
 $:.concat ['./lib']
 require 'benchmark'
-
+require 'riot/experiment'
 #
 # Model
 
@@ -54,6 +54,8 @@ Riot.silently!
 
 n = 100 * 100
 
+RiotExperiment.reporter = RiotExperiment::SilentReporter.new
+
 Benchmark.bmbm do |x|
   x.report("Riot") do
     n.times do
@@ -65,6 +67,18 @@ Benchmark.bmbm do |x|
     end
   end
 
+  x.report("experimental Riot") do
+    RiotExperiment::Context.context("a room") do
+      setup { Room.new("bed") }
+
+      assert("name") { topic.name }.equals("bed")
+    end
+
+    n.times do |i|
+      RiotExperiment.run
+    end
+  end
+  
   x.report("Test::Unit") do
     n.times { Test::Unit::UI::Console::TestRunner.new(RoomTest, Test::Unit::UI::SILENT) }
   end

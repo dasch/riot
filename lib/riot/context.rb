@@ -1,31 +1,22 @@
 module Riot
   class Context
-    # module SubContexts
-    # end
-    # 
     class << self
       attr_accessor :description
 
-      # def inherited(sub)
-      #   sub.const_set(:SubContexts, Module.new)
-      # end
-      # 
       def context(description, &definition)
         ctx = Class.new(self, &definition)
         ctx.description = description
         (contexts << ctx).last
-        # context_name = description.split.collect { |p| p.capitalize }.join.gsub(/[^a-z]/i, "")
-        # self::SubContexts.const_set("Context#{context_name}", ctx)
       end
 
       def setup(description=nil, &definition)
-        description = "#{Time.now.to_i}#{rand(Time.now.to_i)}"
-        define_method("setup: #{description}") { instance_eval(&definition) }
+        description = "#{rand(Time.now.to_i)}" # yuck!
+        setups << define_method("setup: #{description}") { @topic = instance_eval(&definition) }
       end
 
       def asserts(description, &definition)
         assertion = Riot::Assertion.new(description, &definition)
-        define_method("asserts: #{description}") do
+        assertions << define_method("asserts: #{description}") do
           reporter.report(assertion.description, assertion.run(topic))
         end
         assertion
@@ -38,11 +29,6 @@ module Riot
       end
 
       def run(reporter)
-        # self::SubContexts.constants.each do |def_name|
-        #   ctx = self::SubContexts.const_get(def_name)
-        #   reporter.report_on_context(ctx.full_description)
-        #   ctx.new.run(reporter)
-        # end
         contexts.each do |ctx|
           reporter.report_on_context(ctx.full_description)
           ctx.new.run(reporter)
@@ -57,6 +43,9 @@ module Riot
           description
         end
       end
+
+      def assertions; @assertions ||= []; end
+      def setups; @setups ||= []; end
     private
       def contexts; @contexts ||= []; end
     end
@@ -71,17 +60,13 @@ module Riot
     end
 
     def bootstrap(klass)
-      bootstrap(klass.superclass) if klass.superclass
-      klass.instance_methods(false).grep(/^setup: /).each do |name|
-        @topic = send(name)
-      end
+      bootstrap(klass.superclass) if klass.superclass && klass.superclass.respond_to?(:setups)
+      klass.setups.each { |setup| instance_eval(&setup) }
     end
 
     def run(reporter)
       @reporter = reporter
-      self.class.instance_methods(false).grep(/^asserts: /).each do |name|
-        send(name)
-      end
+      self.class.assertions.each { |assertion| instance_eval(&assertion) }
       self.class.run(reporter)
       self
     end

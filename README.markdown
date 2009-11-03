@@ -22,30 +22,30 @@ Then, simply install the Riot gem like so:
 I have done a really simple benchmarking (10,000 runs), but right now, Riot is running about **2 times** faster than Test::unit and thusly Shoulda:
 
     Rehearsal ----------------------------------------------
-    Riot         0.620000   0.010000   0.630000 (  0.647318)
-    Test::Unit   1.500000   0.010000   1.510000 (  1.508144)
-    Shoulda      1.490000   0.000000   1.490000 (  1.501468)
-    ------------------------------------- total: 3.630000sec
+    Riot         0.360000   0.000000   0.360000 (  0.357699)
+    Test::Unit   1.510000   0.010000   1.520000 (  1.518659)
+    Shoulda      1.520000   0.000000   1.520000 (  1.526799)
+    ------------------------------------- total: 3.400000sec
 
                      user     system      total        real
-    Riot         0.630000   0.010000   0.640000 (  0.640481)
-    Test::Unit   1.460000   0.000000   1.460000 (  1.476454)
-    Shoulda      1.480000   0.010000   1.490000 (  1.490633)
+    Riot         0.330000   0.000000   0.330000 (  0.339711)
+    Test::Unit   1.490000   0.010000   1.500000 (  1.504186)
+    Shoulda      1.500000   0.010000   1.510000 (  1.580601)
 
 "Is it valid?", you ask. *I* think it is. I ain't no cheater, but I might be delusional.
 
 To compare against MiniTest, I had to run the benchmark separately.
 
     Rehearsal --------------------------------------------
-    Riot       0.630000   0.010000   0.640000 (  0.641285)
-    MiniTest   0.770000   0.070000   0.840000 (  0.846447)
-    ----------------------------------- total: 1.480000sec
+    Riot       0.360000   0.000000   0.360000 (  0.361637)
+    MiniTest   0.740000   0.070000   0.810000 (  0.815536)
+    ----------------------------------- total: 1.170000sec
 
                    user     system      total        real
-    Riot       0.630000   0.000000   0.630000 (  0.632337)
-    MiniTest   0.730000   0.070000   0.800000 (  0.798107)
+    Riot       0.340000   0.000000   0.340000 (  0.336664)
+    MiniTest   0.730000   0.070000   0.800000 (  0.805393)
 
-Riot is currently only slightly faster, but I haven't done any optimization yet. Riot is also half the code of MiniTest (`313 loc < 674 loc` :)
+Riot here shows to be about twice as fast as minitest. Riot is also half the code of MiniTest (`313 loc < 674 loc` :)
 
 All tests ran with `ruby 1.8.7 (2009-06-12 patchlevel 174) [i686-darwin9]`.
 

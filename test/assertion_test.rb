@@ -64,6 +64,6 @@ context "An assertion" do
 
   context "with symbolic description" do
     setup { "foo" }
-    asserts(:upcase).equals("FOO")
+    asserts(:upcase).returns("FOO")
   end
 end # An assertion block
